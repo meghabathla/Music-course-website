@@ -1,6 +1,24 @@
 import type { Config } from "tailwindcss";
 import svgToDataUri from "mini-svg-data-uri";
-import flattenColorPalette from "tailwindcss/lib/util/flattenColorPalette";
+
+function flattenColors(
+  input: unknown,
+  parentKey: string[] = []
+): Record<string, string> {
+  const result: Record<string, string> = {};
+  if (typeof input === "string") {
+    result[parentKey.join("-")] = input;
+    return result;
+  }
+  if (input && typeof input === "object") {
+    for (const [key, value] of Object.entries(
+      input as Record<string, unknown>
+    )) {
+      Object.assign(result, flattenColors(value, [...parentKey, key]));
+    }
+  }
+  return result;
+}
 
 function addVariablesForColors({
   addBase,
@@ -9,9 +27,7 @@ function addVariablesForColors({
   addBase: (base: Record<string, Record<string, string>>) => void;
   theme: (path: string) => unknown;
 }) {
-  const allColors = (
-    flattenColorPalette as unknown as (input: unknown) => Record<string, string>
-  )(theme("colors"));
+  const allColors = flattenColors(theme("colors"));
   const newVars = Object.fromEntries(
     Object.entries(allColors).map(([key, value]) => [
       `--${key}`,
@@ -52,14 +68,7 @@ function addSvgPatterns({
         )}")`,
       }),
     },
-    {
-      values: (
-        flattenColorPalette as unknown as (
-          input: unknown
-        ) => Record<string, string>
-      )(theme("backgroundColor")),
-      type: "color",
-    }
+    { values: flattenColors(theme("backgroundColor")), type: "color" }
   );
 }
 
